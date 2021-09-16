@@ -49,10 +49,10 @@ void main()
     vec3 topColor = vec3(0.3, 0.6, 0.9); // Sky blue
     vec3 bottomColor = vec3(0.6, 0.3, 0.3); // A nice darkish pink
     // Move the mix factor to bring the horizon haze up when the sun is low
-    float offset = (abs(sunHeight) - 0.6) / 2;
+    float offset = (abs(sunHeight) - 0.8) / 2;
     result = mix(topColor, bottomColor, max(min((mixFactor + offset) * 1.5, 1.0), 0.0));
     // Multiply the result by some float based on the height of the sun to make it darker
-    result *= 1.0 - (sunHeight / 2);
+    result *= 1.0 - (sunHeight * 3 / 4);
     //result = pow(result, vec3(1.0 / 1.5));
     FragColor = vec4(result, 1.0);
 }
@@ -92,15 +92,15 @@ in vec2 TexCoords;
 in float Brightness;
 
 uniform sampler2D uTextureAtlas;
-uniform float uSunCos;
+uniform float uSunHeight;
 
-uniform float uMinLighting = 0.4;
+uniform float uMinLighting = 0.0;
 
 void main()
 {
     vec4 result = texture(uTextureAtlas, TexCoords);
     result.xyz *= Brightness;
-    result.xyz *= (1 - pow(uSunCos, 2)) * (1.0 - uMinLighting) + uMinLighting;
+    result.xyz *= (1.0 - (uSunHeight * 3 / 4)) * (1.0 - uMinLighting) + uMinLighting;
     // Return
     FragColor = result;
 }
