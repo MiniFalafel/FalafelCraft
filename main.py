@@ -312,7 +312,7 @@ class GameWindow(Window):
         # Set uniforms
         # Camera
         self.camera.setUniforms(self.blockShader, self.width / self.height)
-        self.blockShader.setFloat("uSunCos", (math.sin(-self.time) + 1.0) / 2)
+        self.blockShader.setFloat("uSunHeight", (math.sin(-self.time) + 1.0) / 2)
         # Model Matrix
         model = glm.mat4(1.0)
         self.blockShader.setMat4("modelMatrix", model)
