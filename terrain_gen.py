@@ -6,7 +6,7 @@ import random
 #from profiling import *
 
 # Terrain generation settings
-from settings import MAX_GEN_HEIGHT
+from settings import MAX_HEIGHT
 
 # Biome noise
 def getBiomeNoise(x, y, seed):
@@ -56,5 +56,5 @@ def getHeightFromNoise(v: float, biomeValue: float):
         borders = [0.8, 1.0]
     m = (m / 2) + (m * (borders[1] - borders[0]))
     r = v * m
-    r += MAX_GEN_HEIGHT
+    r += MAX_HEIGHT
     return abs(int(round(r)))

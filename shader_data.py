@@ -27,6 +27,38 @@ void main()
 """
 
 ################################
+# Debug Shader                 #
+################################
+# Vertex Shader
+debugVertexCode = """#version 330 core
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aColor;
+
+out vec3 Color;
+
+uniform mat4 modelMatrix;
+uniform mat4 projectionMatrix;
+uniform mat4 viewMatrix;
+
+void main() {
+    Color = aColor.rgb;
+    
+    vec4 FragPos = modelMatrix * vec4(aPos, 1.0);
+    gl_Position = projectionMatrix * viewMatrix * FragPos;
+}
+"""
+# Fragment Shader
+debugFragmentCode = """#version 330 core
+out vec4 FragColor;
+
+in vec3 Color;
+
+void main() {
+    FragColor = vec4(Color, 1.0);
+}
+"""
+
+################################
 # Skybox shader                #
 ################################
 skyFragmentCode = """#version 330 core

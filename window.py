@@ -52,6 +52,7 @@ class Window:
 
         # Time variables
         self.elapsedTime = 0
+        self.firstTimeInterval = True
 
         # Setup loop functions
         self.loopFunctions = []
@@ -136,9 +137,13 @@ class Window:
 
     # Time functions
     def getTimeInterval(self):
-        t = time.time()
-        r = t - self.elapsedTime
-        self.elapsedTime = t
+        if not self.firstTimeInterval:
+            t = time.perf_counter()
+            r = t - self.elapsedTime
+            self.elapsedTime = t
+        else:
+            r = 0
+            self.firstTimeInterval = False
         return r
 
     # Render loop functions

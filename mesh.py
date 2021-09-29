@@ -2,7 +2,8 @@
 from OpenGL.GL import *
 from profiling import *
 
-from settings import CHUNK_SIZE, MAX_HEIGHT, FLOATS_PER_VERTEX, VERTS_PER_BLOCK, INDICES_PER_FACE
+from settings import CHUNK_SIZE, MAX_HEIGHT, FLOATS_PER_VERTEX, FLOATS_PER_DEBUG_VERTEX,\
+    VERTS_PER_BLOCK, INDICES_PER_FACE
 # Temp settings
 facesPerBlock = 6
 
@@ -27,6 +28,15 @@ def genIndices(NumVertices : int):
         indices.append(i0 + 2)
         indices.append(i0 + 3)
         indices.append(i0)
+
+    return indices
+
+def genLineIndices(NumVertices: int):
+    indices = []
+    for i in range(NumVertices // 2):
+        i0 = i * 2
+        indices.append(i0)
+        indices.append(i0 + 1)
 
     return indices
 
@@ -123,6 +133,7 @@ class Mesh:
         self.drawLength = 0
         self.EndIndex = 0
 
+    # TODO: Fix this.
     def addData(self, vertices):
         t = Timer("    Mesh.addData(list)")
 
@@ -150,3 +161,76 @@ class Mesh:
         glBindVertexArray(self.VAO)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.EBO)
         glDrawElements(GL_TRIANGLES, self.drawLength, GL_UNSIGNED_INT, None)
+
+class DebugMesh:
+    def __init__(self, vertices, indices):
+        t = Timer("DebugMesh.__init__(list)")
+
+        if vertices is None:
+            vertices = list()
+
+        if not len(vertices) % FLOATS_PER_DEBUG_VERTEX == 0:
+            raise MeshError("Make sure there are 6 floats contained in each debug vertex:\n"
+                            "    3 for position.xyz and 3 for debug color."
+                            )
+
+        self.drawLength = len(indices)
+
+        # Declare VAO and VBO
+        self.VAO = GLuint(0)
+        self.VBO = GLuint(0)
+        self.EBO = GLuint(0)
+
+        self.vertexSize = FLOATS_PER_DEBUG_VERTEX * sizeof(GLfloat)
+
+        self.setupMesh(vertices, indices)
+
+    def setupMesh(self, vertexData, indices):
+        t = Timer("    DebugMesh.setupMesh()")
+
+        glGenVertexArrays(1, self.VAO)
+        glGenBuffers(1, self.VBO)
+        glGenBuffers(1, self.EBO)
+
+        glBindVertexArray(self.VAO)
+
+        glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
+
+        VBOAllocSpace = len(vertexData)
+        VBOData = toGLfloats(vertexData)
+        if VBOAllocSpace == 0:
+            VBOAllocSpace = FLOATS_PER_DEBUG_VERTEX * 256
+            VBOData = None  # Just allocates the space with no data
+
+        glBufferData(GL_ARRAY_BUFFER, VBOAllocSpace * sizeof(GLfloat), VBOData, GL_DYNAMIC_DRAW)
+
+        vertSize = FLOATS_PER_DEBUG_VERTEX * sizeof(GLfloat)
+
+        # Position
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, vertSize, c_void_p(0))
+        glEnableVertexAttribArray(0)
+
+        # Colors
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, vertSize, c_void_p(3 * sizeof(GLfloat)))
+        glEnableVertexAttribArray(1)
+
+        # Element Buffer Object
+        EBOAllocSpace = len(indices)
+        EBOData = toGLuints(indices)
+        if EBOAllocSpace == 0:
+            EBOAllocSpace = INDICES_PER_FACE * 2 * 256
+            EBOData = None
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.EBO)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, EBOAllocSpace * sizeof(GLuint), EBOData, GL_STATIC_DRAW)
+
+        # Unbind
+        glBindVertexArray(0)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+
+    def Draw(self):
+        t = Timer("    DebugMesh.Draw()")
+
+        glBindVertexArray(self.VAO)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.EBO)
+        glDrawElements(GL_LINES, self.drawLength, GL_UNSIGNED_INT, None)

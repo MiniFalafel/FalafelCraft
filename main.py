@@ -4,10 +4,10 @@
 #from threading import Lock, Thread
 # Main
 # Project Files
-from camera import *
+from player import *
 from world import *
-from shader import *
 from mesh import *
+from shader import *
 from shader_data import *
 from profiling import *
 from window import *
@@ -117,7 +117,7 @@ def rayCast(startPos : glm.vec3, direction : glm.vec3, chunk : Chunk, findBreakP
 
     r = rayEnd(False, dir, startPos, startPos)
 
-    endPos = startPos
+    endPos = startPos.xyz
     refineStart = endPos
 
     for _ in range(MAX_INTERACTION_DIST * STEPS_PER_RAY_UNIT):
@@ -164,12 +164,16 @@ class GameWindow(Window):
         self.addLoop(self.Update)
 
         # Game and world
-        self.blockShader = ShaderProgram(vertexCode, blockFragmentCode)
         self.chunk = Chunk(0, 0, random.randint(0, 1000000))
-        self.camera = Camera((0.0, PLAYER_HEIGHT + MAX_GEN_HEIGHT, 0.0), (0, 90))
+        self.camera = Camera((0.0, MAX_HEIGHT + 4, 0.0), (0, 90, 0))
+        self.player = Player(self.camera)
         self.time = 0
 
-        # BLock usage slot
+        # Block and debug shaders
+        self.blockShader = ShaderProgram(vertexCode, blockFragmentCode)
+        self.debugShader = ShaderProgram(debugVertexCode, debugFragmentCode)
+
+        # Block usage slot
         self.blockUseIndex = 0
 
         # Skybox setup
@@ -180,20 +184,23 @@ class GameWindow(Window):
         # Textures
         self.setupTextures()
 
+        self.getTimeInterval()
+
     # Parent class mouse input function override
     def setup2DProjection(self, width, height):
         if not self.width == 0 and not self.height == 0:
             aspectRatio = width / height
-            self.OrthoProjectionMatrix = glm.ortho(-aspectRatio, aspectRatio, -1.0, 1.0, -1.0, 1.0)
+            self.OrthoProjectionMatrix = glm.ortho(-aspectRatio, aspectRatio, -1.0, 1.0)
             self.reticleShader.use()
             self.reticleShader.setMat4("projectionMatrix", self.OrthoProjectionMatrix)
 
     def setupSkybox(self):
         # Skybox, sun, and moon
-        self.skyShader = ShaderProgram(vertexCode, skyFragmentCode)
-        self.sunMoonShader = ShaderProgram(vertexCode, sunMoonFragmentCode)
         self.skyboxMesh = genSkyboxMesh(1)
         self.sunMoonMesh = genSunMoonMesh(1)
+        # Sun and moon shaders
+        self.skyShader = ShaderProgram(vertexCode, skyFragmentCode)
+        self.sunMoonShader = ShaderProgram(vertexCode, sunMoonFragmentCode)
 
     def setupGUI(self):
         # Reticle stuff
@@ -245,11 +252,11 @@ class GameWindow(Window):
             self.setCursorDisabled(self.mouseLocked)
         # Pass the key input to the camera
         if self.mouseLocked:
-            self.camera.processKeyInput(key, mods, True) # Tells it that the keys are being pressed
+            self.player.processKeyInput(key, mods, True) # Tells it that the keys are being pressed
 
     def onUserKeyRelease(self, key, mods):
         # Pass the key input to the camera
-        self.camera.processKeyInput(key, mods, False) # Tells it that the keys are being released
+        self.player.processKeyInput(key, mods, False) # Tells it that the keys are being released
 
     def Update(self):
         t = Timer("    Window.Update()")
@@ -259,13 +266,15 @@ class GameWindow(Window):
         # Update chunk
         self.chunk.updateChunk(dt)
 
-        self.camera.update(dt)
+        self.player.updateAABS(dt)
+        self.player.CollideWithChunk(self.chunk)
+        self.player.updateCameraPosition()
+
         # Tell the chunk loader that it can now load a chunk
         #self.world.updateChunks(self.camera.pos)
         # Add to time variable
-        #self.time += dt / (60 * DAY_MINUTES)
-        #self.time = self.time % 360
-        self.time = 90 + 30
+        self.time += dt / (60 * DAY_MINUTES)
+        self.time = self.time % 360
 
         # Draw
         self.Draw(dt)
@@ -318,6 +327,14 @@ class GameWindow(Window):
         self.blockShader.setMat4("modelMatrix", model)
         # Draw the mesh
         self.chunk.Draw()
+
+        """ Debug Boxes (for camera AABB stuff)
+        # Debug Boxes/Lines
+        self.debugShader.use()
+        self.camera.setUniforms(self.debugShader, self.width / self.height)
+        self.player.DrawDebug(self.debugShader)
+        """
+
 
         # Reticle
         glDisable(GL_DEPTH_TEST)

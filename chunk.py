@@ -58,6 +58,14 @@ class Chunk:
         self.mesh = Mesh()
         # Setup chunk
         self.setupblocks()
+        """
+        hMap = dict()
+        for x in range(CHUNK_SIZE):
+            for y in range(CHUNK_SIZE):
+                hMap[(x, y)] = 1
+        self.fillBlocks(hMap)
+        self.generateChunkMesh()
+        """
 
         # block loading queue
         self.blockQueue = deque()
@@ -180,6 +188,7 @@ class Chunk:
                 pass
         else:
             self.blocks[pos] = Block(len(self.blocks.items()), blockType)
+        # TODO: Change this to update the mesh in only the areas around the block (Mesh.addData())
         self.reload()
 
     # Generate chunk mesh (we generate a new one so that we aren't rendering blocks that the player can't see)

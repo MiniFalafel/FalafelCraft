@@ -9,8 +9,10 @@ import glm
 # Profiling
 from profiling import *
 
+from settings import FoV
+
 # World up direction
-WORLDUP = glm.vec3(0, 1, 0) # Positive y is the up direction
+WORLDUP = glm.vec3(0, 1, 0) # Positive y is the up direction/
 
 # Camera class
 class Camera(object):
@@ -18,7 +20,7 @@ class Camera(object):
     maxY = 89
     minY = -89
     # Field of view
-    FOV = 70.0 # Default value
+    FOV = FoV # Default value
     # Camera speed
     camSpeed = 3.5 # Default
 
@@ -26,21 +28,23 @@ class Camera(object):
     forward = False; backward = False
     right = False; left = False
     up = False; down = False
+    sprint = False; crouch = False
 
     # Constructor
-    def __init__(self, pos=(0, 0, 0), rot=(0, 0, 0), FOV = 70.0, movementSpeed = 3.5):
+    def __init__(self, pos=(0, 0, 0), rot=(0, 0, 0), FOV = 70.0):
         t = Timer("Camera.__init__(vec3, vec3, float, float)")
 
         # Set position and rotation
-        self.pos = list(pos)
-        self.rot = list(rot)
+        self.pos = glm.vec3(pos)
+        self.rot = glm.vec3(rot)
         # Make directional vectors and set them up
         self.Front, self.Right, self.Up = glm.vec3(0.0)
         self.updateVectors()
         # Set FOV
         self.FOV = FOV
-        # Set movement speed
-        self.camSpeed = movementSpeed
+
+    def addToPos(self, deltaVec):
+        self.pos += deltaVec
 
     # Update camera vectors
     def updateVectors(self):
@@ -48,9 +52,9 @@ class Camera(object):
 
         # Get the front vector
         front = glm.vec3()
-        front.x = math.sin(glm.radians(self.rot[1] + 180)) * math.cos(glm.radians(self.rot[0]))
-        front.y = math.sin(glm.radians(self.rot[0]))
-        front.z = math.cos(glm.radians(self.rot[1] + 180)) * math.cos(glm.radians(self.rot[0]))
+        front.x = math.sin(glm.radians(self.rot.y + 180)) * math.cos(glm.radians(self.rot.x))
+        front.y = math.sin(glm.radians(self.rot.x))
+        front.z = math.cos(glm.radians(self.rot.y + 180)) * math.cos(glm.radians(self.rot.x))
         self.Front = glm.normalize(front)
         # Get the right vector
         self.Right = glm.normalize(glm.cross(self.Front, WORLDUP))
@@ -61,9 +65,9 @@ class Camera(object):
     def processMouseMotion(self, dx, dy, sensitivity = 0.25):
         t = Timer("    Camera.processMouseMotion(float, float, float)")
 
-        self.rot[0] += dy * sensitivity; self.rot[1] -= dx * sensitivity
-        if self.rot[0] > self.maxY: self.rot[0] = self.maxY
-        elif self.rot[0] < self.minY: self.rot[0] = self.minY
+        self.rot.x += dy * sensitivity; self.rot.y -= dx * sensitivity
+        if self.rot.x > self.maxY: self.rot.x = self.maxY
+        elif self.rot.x < self.minY: self.rot.x = self.minY
         # Update direction vectors with the new rotation
         self.updateVectors()
 
@@ -79,21 +83,9 @@ class Camera(object):
         # Up and down
         if KEY == GLFW_KEY_SPACE: self.up = keyPressed
         if KEY == GLFW_KEY_LEFT_CONTROL: self.down = keyPressed
-        # Update vectors
-
-    def update(self, dt):
-        t = Timer("    Camera.update()")
-
-        k = dt * self.camSpeed # Movement constant for the amount of time that has passed
-        rotY = -(self.rot[1] / 180 * math.pi) # Convert from degrees to radians for the default trigonometric functions
-        dx, dz = k * math.sin(rotY), k * math.cos(rotY)
-        if self.forward: self.pos[0]    += dx; self.pos[2] -= dz
-        if self.backward: self.pos[0]   -= dx; self.pos[2] += dz
-        if self.left: self.pos[0]       -= dz; self.pos[2] -= dx
-        if self.right: self.pos[0]      += dz; self.pos[2] += dx
-
-        if self.up: self.pos[1] += k
-        if self.down: self.pos[1] -= k
+        # Sprint and crouch mods
+        if MODS == GLFW_MOD_SHIFT: self.sprint = keyPressed
+        if MODS == GLFW_MOD_CONTROL: self.crouch = keyPressed
 
     # Matrix stuff
     # Get view matrix (for shaders)
